@@ -1,0 +1,212 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd">
+<?rfc toc="yes"?>
+<?rfc tocompact="yes"?>
+<?rfc tocdepth="3"?>
+<?rfc tocindent="yes"?>
+<?rfc symrefs="yes"?>
+<?rfc sortrefs="yes"?>
+<?rfc comments="yes"?>
+<?rfc inline="yes"?>
+<?rfc compact="yes"?>
+<?rfc subcompact="no"?>
+<rfc category="std" docName="draft-martinsen-tram-turnbandwidthprobe-latest"
+     ipr="trust200902">
+  <front>
+    <title abbrev="turn bandwidth probe">TURN Bandwidth Probe</title>
+
+    <author fullname="Paal-Erik Martinsen" initials="P.E" surname="Martinsen">
+      <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
+      <address>
+        <postal>
+          <street>Philip Pedersens Vei 22</street>
+          <code>1325</code>
+          <city>Lysaker</city>
+          <region>Akershus</region>
+          <country>Norway</country>
+        </postal>
+        <email>palmarti@cisco.com</email>
+      </address>
+    </author>
+
+    <author fullname="Trond Andersen" initials="T." surname="Andersen">
+      <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
+      <address>
+        <postal>
+          <street>Philip Pedersens Vei 22</street>
+          <code>1325</code>
+          <city>Lysaker</city>
+          <region>Akershus</region>
+          <country>Norway</country>
+        </postal>
+        <email>trondand@cisco.com</email>
+      </address>
+    </author>
+
+    <date />
+
+    <workgroup>TRAM</workgroup>
+
+    <abstract>
+      <t>
+       Yup
+      </t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section anchor="introduction" title="Introduction">
+      <t>
+        When the ICE (RFC 5245) and TURN (RFC 5766) is used in a
+        endpoint as a firewall/NAT traversal mechanism the TURN relay
+        can also be used to measure bandwidth and latency prior to
+        call setup.
+      </t>
+      <t>
+        In normal ICE behavior the client first send a message
+        (allocate request) to the TURN server to allocate a RELAY
+        address. This address can be used by the endpoint to receive
+        media from other endpoints. The media stream is then received
+        by the TURN server and then relayed back to the endpoint
+        behind the fw/NAT. For security reasons the endpoint must
+        first set the correct permissions on the TURN server to only
+        allow media from remote participants he wants to talk to
+        (Addresses taken from the SIP SDP offer/answer exhange) . The
+        endpoint will also learn it RFLX address on the fw/NAT when
+        talking to the TURN server.
+      </t>
+    </section>
+
+    <section anchor="notation" title="Notational Conventions">
+      <t>
+        The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL
+        NOT", "SHOULD", "SHOULD NOT", "RECOMMENDED", "MAY", and
+        "OPTIONAL" in this document are to be interpreted as described
+        in <xref target="RFC2119"/>.
+      </t>
+    </section>
+
+    <section title="Overview of Operation">
+      <t>
+        Prior to the call (On registering or any convenient time) the
+        endpoint can measure bandwidth and latency between the
+        endpoint and TURN server.
+      </t>
+      <t>
+      <figure anchor="fig_overview"><artwork><![CDATA[
+          
+                                       * Relay 
+                                 +------+  
+                       *Rflx  -<-| TURN |<-\
+   /-------\     +-----+     /   +------+   |
+   |       |--<--| NAT |-<---               |
+   | Alice |--->-|-->--|->-->----->----->--/     
+   \-------/     +-----+
+
+
+      ]]></artwork></figure>
+      </t>
+      <t>
+        The agent allocates a TURN Relay port on its designated TURN
+        server as described in RFC XXX. In the process the agent will
+        alos learn the outmost NAT address. This is called the
+        reflexive address. For more information se the section
+        regarding candidate discovery in ICE RFCZZZ. 
+      </t>
+      <t>
+        The agent must set the permissions on the allocated realay
+        port as describen in TURN RFCYYY section xx, to allow traffic
+        from the discovered RFLX adress.  
+      </t>
+      <t>
+        Send packets to the allocated Relay port on the TURN
+        server. The packets will be forarded back to the agent in a
+        data inidication pacaket- Se TURN RFCXXX sectionYY for details
+        on how the ternserver can relay packets back to the allocating
+        agent. Available availble bandwith can be measured by sending
+        varioyng amounts of packet and detecting packet loss. Each
+        packet sent will be affecting bout upstream and downstream link
+      </t>
+      <t>
+        4. Create Special payload packets with timestamp and send them
+        from the endpoint to the RELAY port on the TURN server.
+        
+        5. Special payload packets arrive at TURN server on the RELAY
+        port and will be sent back to endpoint on the TURN tunnel
+        opened up by the initial allocate request.
+        
+        6 Special payload packets arrive at endpoint. Bandwith and
+        latency can now be measured by using the timestamp in the
+        packets. (Latency can be a bit problematic as we don?t know if
+        inbound or outbound differ. But divide by 2 and the number
+        will be fairly accurate)
+      </t>
+    </section>
+
+    <section title="New STUN Attributes" anchor="new_attributes" >
+      <t>
+        This STUN extension defines the following new attribute:
+      </t>
+    </section>
+
+    <section title="Base Protocol Procedures">
+      <t>
+        Joda det stemmer det..
+      </t>
+    </section>
+
+    <section title="IANA Considerations">
+      <t>
+        The codepoint for the new STUN attribute defined in this
+        specification is described in <xref target="new_attributes"/>.
+      </t>
+    </section>
+
+    <section anchor="security" title="Security Considerations">
+      <t>
+        Viktig med noe her..
+      </t>
+    </section>
+
+    <section anchor="ack" title="Acknowledgements">
+      <t>
+        Thanks to Dan Wing for review and input.
+      </t>
+    </section>
+    
+</middle>
+
+<back>
+  <references title="Normative References">
+    
+    <?rfc include="reference.RFC.2119"?>
+    <?rfc include="reference.RFC.3550"?>
+    <?rfc include="reference.RFC.3711"?>
+    <?rfc include="reference.RFC.4884"?>
+    <?rfc include="reference.RFC.4961"?>
+    
+    <?rfc include="reference.RFC.5245"?>
+    <?rfc include="reference.RFC.5389"?>
+    <?rfc include="reference.RFC.5780"?>
+    
+    <?rfc include='reference.I-D.martinsen-tram-discuss' ?>
+  </references>
+  
+  <references title="Informative References">
+    <?rfc include="reference.RFC.1393"?>
+      <?rfc include="reference.RFC.2992"?>
+      <?rfc include="reference.RFC.5927"?>
+      <?rfc include='reference.I-D.ietf-mmusic-sdp-bundle-negotiation'?>
+      
+      <reference anchor="ICMPTest" target="https://github.com/palerikm/ICMPTest/">
+        <front>
+          <title>ICMP test github repo</title>
+          <author/>
+          <date/>
+        </front>
+      </reference>
+  </references>
+    
+</back>
+</rfc>
+  
