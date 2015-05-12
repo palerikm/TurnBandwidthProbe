@@ -13,7 +13,7 @@
 <rfc category="std" docName="draft-martinsen-tram-turnbandwidthprobe-latest"
      ipr="trust200902">
   <front>
-    <title abbrev="turn bandwidth probe">TURN Bandwidth Probe</title>
+    <title abbrev="TURN Bandwidth Probe">Traversal Using Relays around NAT (TURN) Bandwidth Probe</title>
 
     <author fullname="Paal-Erik Martinsen" initials="P.E" surname="Martinsen">
       <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
@@ -42,7 +42,7 @@
         <email>trondand@cisco.com</email>
       </address>
     </author>
-    
+
     <author fullname="Gonzalo Salgueiro" initials="G." surname="Salgueiro">
       <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
       <address>
@@ -56,19 +56,20 @@
         <email>gsalguei@cisco.com</email>
       </address>
     </author>
-    
+
     <date />
 
     <workgroup>TRAM</workgroup>
 
     <abstract>
       <t>
-        Doing pre-call probing to discover a reasonable value for the
-        available bandwidth is useful information that can be utilized
-        by video encoders or other bandwidth intensive producers. The
-        method described here is intended to be used as a starting
-        value, applications using this method should also use
-        aproperiate rate adaptation mechanisms.
+        Performing pre-call probing to discover a reasonable value for
+        the available bandwidth is useful information that can be
+        utilized by bandwidth sensitive or bandwidth intensive network
+        devices (e.g., video encoders). The method described herein is
+        intended to produce an initial bandwidth value. Applications
+        using this mechanism should also employ appropriate rate
+        adaptation techniques.
       </t>
     </abstract>
   </front>
@@ -76,23 +77,27 @@
   <middle>
     <section anchor="introduction" title="Introduction">
       <t>
-        When the ICE <xref target="RFC5245"/>. and TURN <xref
-        target="RFC5766"/>is used in a endpoint as a firewall/NAT
-        traversal mechanism the TURN relay can also be used to measure
-        bandwidth and latency prior to call setup.
+        When Interactive Connectivity Establishment (ICE) <xref
+        target="RFC5245"/> and Traversal Using Relays around NAT (TURN)
+        <xref target="RFC5766"/> are used by an endpoint as a
+        firewall/NAT traversal mechanism, the TURN relay can also be
+        used to measure bandwidth and latency prior to call setup.
       </t>
       <t>
-        In normal ICE behavior the client first send a message
+        In normal ICE behavior the client first sends a message
         (allocate request) to the TURN server to allocate a RELAY
         address. This address can be used by the endpoint to receive
         media from other endpoints. The media stream is then received
         by the TURN server and then relayed back to the endpoint
-        behind the fw/NAT. For security reasons the endpoint must
+        behind the firewall/NAT. For security reasons the endpoint must
         first set the correct permissions on the TURN server to only
-        allow media from remote participants he wants to talk to
-        (Addresses taken from the SIP SDP offer/answer exchange) . The
-        endpoint will also learn it RFLX address on the fw/NAT when
-        talking to the TURN server.
+        allow media from remote participants it wants to communicate
+        with (i.e., addresses taken from the Session Initiation Protocol
+        (SIP) <xref target="RFC3261"/> Session Description Protocol
+        (SDP) <xref target="RFC4566"/> offer/answer exchange <xref
+        target="RFC3264"/>) . The endpoint will also learn its reflexive
+        address on the firewall/NAT when talking to the
+        TURN server.
       </t>
     </section>
 
@@ -107,19 +112,19 @@
 
     <section title="Overview of Operation">
       <t>
-        Prior to the call (On registering or any convenient time) the
-        endpoint can measure bandwidth and latency between the
-        endpoint and TURN server.
+        Prior to the call (upon registering with the TURN server or at
+        any opportune time thereafter) the endpoint can measure
+        bandwidth and latency between the endpoint and TURN server.
       </t>
       <t>
       <figure anchor="fig_overview"><artwork><![CDATA[
-          
-                                       * Relay 
-                                 +------+  
+
+                                       *Relay
+                                 +------+
                        *Rflx  -<-| TURN |<-\
    /-------\     +-----+     /   +------+   |
    |       |--<--| NAT |-<---               |
-   | Alice |--->-|-->--|->-->----->----->--/     
+   | Alice |--->-|-->--|->-->----->----->--/
    \-------/     +-----+
 
 
@@ -127,44 +132,122 @@
       </t>
       <t>
         The agent allocates a TURN Relay port on its designated TURN
-        server as described in RFC 5766<xref target="RFC5766"/>. In
-        the process the agent will also learn the out-most NAT
-        address. This is called a reflexive address. For more
-        information see the section regarding candidate gathering in
-        ICE RFC<xref target="RFC5766"/> section 2.1.
+        server as described in RFC 5766 <xref target="RFC5766"/>. In
+        the process the agent will also learn the outermost NAT
+        address. This is called a reflexive address (Rflx). For more
+        information see Section 2.1 of <xref target="RFC5766"/>
+        regarding candidate gathering in ICE.
       </t>
       <t>
         The agent must set the permissions on the allocated RELAY port
-        as described in the TURN RFC5766 <xref target="RFC5766"/>
-        section 8, to allow traffic from the discovered RFLX address.
+        as described in Section 8 of <xref target="RFC5766"/> to allow
+        traffic from the discovered reflexive address.
       </t>
       <t>
         When sending packets to the allocated RELAY port on the TURN
         server, the packets will be forwarded back to the agent in a
-        data indication packet- See TURN RFC5766 <xref
-        target="RFC5766"/> section 10 for details on how the TURN
-        server can relay packets back to the allocating
-        agent. Available bandwidth can be measured by sending varying
-        amounts of packet and detecting packet loss. Each packet sent
-        will be affecting bout upstream and downstream link
+        data indication packet. See Section 10 of <xref
+        target="RFC5766"/> for details on how the TURN server can relay
+        packets back to the allocating agent. Available bandwidth can be
+        measured by sending varying number of packets and detecting the
+        amount of packet loss. Each packet sent affects both upstream
+        and downstream links.
       </t>
       <t>
-        To make it easier to calculate the available a TIMESTAMP
-        attribute is defined and can be added to the STUN probe
-        packets. To vary the packet size the PADDING attribute from
-        RFC5780 <xref target="RFC5780"/>can be used. 
+        To make it easier to calculate the available bandwidth a
+        TIMESTAMP attribute is defined in this document (see Section
+        <xref target="timestamp_attributes"/>) and can be added
+        to the Session Traversal Utilities for NAT (STUN) <xref
+        target="RFC5389"/> probe packets. The PADDING attribute from
+        RFC5780 <xref target="RFC5780"/> can be used to vary the packet
+        size.
       </t>
       <t>
-        Discovering MTU and the network path using the STUN-PMTUD <xref
-        target="I-D.petithuguenin-tram-stun-pmtud"/> and STUN
-        Traceroute <xref
-        target="I-D.martinsen-tram-stuntrace"/> drafts can also be
-        when probing for the bandwidth available between client and
-        TURN server. 
+        Discovering the MTU and network path (using the STUN-PMTUD
+        <xref target="I-D.petithuguenin-tram-stun-pmtud"/> and STUN
+        Traceroute <xref target="I-D.martinsen-tram-stuntrace"/>
+        mechanisms) can also be performed when probing for the bandwidth
+        available between the client and the TURN server.
       </t>
     </section>
 
-    <section title="New STUN Attributes" anchor="new_attributes" >
+
+    <section title="Base Protocol Procedures">
+      <t>
+        In order to perform the STUN bandwidth probing mechanism
+        described in this document, the client MUST take the following
+        general steps (explained in greater detail in the following
+        subsections).
+        <list style="symbols">
+          <t> Allocate TURN RELAY address</t>
+          <t> Set correct permissions on the allocated TURN RELAY
+          address</t>
+          <t> Originating client sends data to itself through the TURN server and measures bandwidth throughput and latency</t>
+        </list>
+      </t>
+      <section title="Allocating a TURN Relay Address">
+        <t>
+          The client allocates a TURN RELAY port as described in RFC
+          5766 <xref target="RFC5766"/>. Discovery of the TURN server
+          as well as the determination of what TURN server to uses is
+          entirely at the discretion of the client and outside the scope
+          of this document. A client MUST be prepared to be redirected
+          to another TURN server if it receives an ALTERNATE-SERVER
+          response.
+        </t>
+      </section>
+      <section title="Setting Permissions">
+        <t>
+          While allocating the TURN RELAY port the client will learn
+          its outermost NAT address or reflexive address. This is the
+          address the TURN server will receive the bandwidth probing
+          packets from. Specific permissions needs to be added to the
+          TURN server before it allows relaying of any packets. In this
+          case the client needs to set permissions as described in
+          Section 8 of <xref target="RFC5766"/>.
+        </t>
+        <t>
+          To set the correct permission the client must form a
+          CreatePermission request with the obtained reflexive address
+          encoded in a XOR-PEER-ADDRESS attribute. This is described
+          in Section 9.1 of <xref target="RFC5766"/>.
+        </t>
+      </section>
+      <section title="Sending Data to Measure Available Bandwidth and
+                      Latency">
+
+        <t>
+          The specific calculation and measurement of the bandwidth is
+          client dependent and implementation-specific and is thus
+          outside the scope of this document.
+        </t>
+        <t>
+          If the client want to use STUN packets as the basis for the
+          probing packets, then a TIMESTAMP attribute is defined in this
+          specification (see Section <xref
+          target="timestamp_attributes"/>) to simplify measurement of
+          round-trip time (RTT) and available bandwidth. A PADDING
+          attribute is already defined in RFC 5780 <xref
+          target="RFC5780"/> that makes it easy to vary the size of the
+          STUN probing packet.
+        </t>
+        <t>
+          The probing packet will be sent upstream to the TURN server
+          and later received downstream from the TURN
+          server. Available bandwidth would typically be determined to
+          be the lowest of the bandwidth values calculated for the
+          upstream and downstream directions.
+        </t>
+      </section>
+    </section>
+
+    <section title="IANA Considerations">
+      <t>
+        This specification defines a new STUN attribute.  IANA added
+        this new attribute to the STUN Attributes sub-registry of the
+        Session Traversal Utilities for NAT (STUN) Parameters registry.
+      </t>
+    <section title="New STUN Attribute" anchor="new_attributes" >
       <t>
         This STUN extension defines the following new attribute:
         <figure>
@@ -176,10 +259,10 @@
         </figure>
       </t>
 
-      <section title="TIMESTAMP">
+      <section title="TIMESTAMP" anchor="timestamp_attributes">
         <t>
-          This attribute have a length of 80. Padding is needed to hit
-          the required STUN 32 bit STUN attribute boundary.
+          The TIMESTAMP attribute has a length of 80 bits. Padding is
+          needed to hit the required 32 bit STUN attribute boundary.
         </t>
         <t>
           <figure anchor="timestamp_attr" title="TIMESTAMP Attribute">
@@ -191,107 +274,46 @@
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                    microseconds (32bit)                       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |      seq (16bit)              |             PAD               |
+   |      seq (16bit)              |            PADDING            |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
             ]]></artwork></figure></t>
           <t>
-            The seconds and microseconds fields reflect what you would
-            get in the struct timeval when you call
-            getTimeofDay(). Note that size of that struct might vary on
-            various platforms, but 32 bits is more than enough to get
-            the required accuracy for the feature described in this
-            document.
+            The seconds and microseconds fields reflect what would
+            be returned in the struct timeval when calling
+            getTimeofDay() function. Note that the size of that struct
+            may vary based on platform, but 32 bits is more than
+            sufficieint to obtain the required accuracy for the feature
+            described in this document.
           </t>
           <t>
             The seq field is a 16 bit sequence number. It is increased
-            by one for each bandwidth probe packet sent. Choosing a
-            different starting value than 0 for different probes
-            might be a good thing security wise.
+            by one for each bandwidth probe STUN packet sent. Be aware
+            that choosing a starting value other than 0 for different
+            probes is considered a security best practice.
           </t>
       </section>
-    
-    </section>
-    
-    <section title="Base Protocol Procedures">
-      <t>
-        The client needs to take the following steps explained in
-        grater detail in the following subsections. 
-        <list>
-          <t> Allocate TURN RELAY address</t>
-          <t> Set correct permissions on the allocated TURN RELAY
-          address</t>
-          <t> Send data to yourself through the TURN server and
-          measure bandwidth throughput and latency</t>
-        </list>
-      </t>
-      <section title="Allocating a TURN Relay Address">
-        <t>
-          The client allocates a TURN RELAY port as described in RFC
-          5766<xref target="RFC5766"/>. Discovery of the TURN server
-          and what TURN server to uses is entirely up to the client. A
-          client must be preperaed to be redirected to another TURN
-          server if it receives a ALTERNET-SERVER response.
-        </t>
-      </section>
-      <section title="Setting Permissions">
-        <t>
-          While allocating the TURN RELAY port the client will learn
-          its out-most NAT address or RFLX address. This is the
-          address the the TURN server will receive the bandwidth
-          probing packets from. Specific permissions needs to be added
-          to the TURN server before it allows relaying of any
-          packets. In this case the client needs to set a permissions
-          as described in the TURN RFC <xref target="RFC5766"/> Section 8. 
-        </t>
-        <t>
-          To set the correct permission the client must form a
-          CreatePermission request with the obtained RFLX address
-          encoder in a XOR-PEER-ADDRESS attribute. This is described
-          in section 9.1 of the TURN RFC <xref target="RFC5766"/>.
-        </t>
-      </section>
-      <section title="Sending Data to measurre available bandwidth and
-                      latency">
-        
-        <t>
-          It is up to the client how to measure the bandwidth.
-        </t>
-        <t>
-          If the clients want to use STUN packets as the basis for the
-          probing packets. A TIMESTAMP attribute is defined in this
-          specification to make it easier to measure RTT and
-          available bandwidth. A PADDING attribute is already defined
-          in RFC 5780 <xref target="RFC5780"/> that makes it easy to
-          vary the size of the STUN probing packet.  
-        </t>
-        <t>
-          The probing packet will be sent upstream to the TURN serve
-          and later received downstream from the TURN
-          server. Available bandwidth would probably be the lowest of
-          the what the upstream and downstream offers. 
-        </t>
-      </section>
+
     </section>
 
-    <section title="IANA Considerations">
-      <t>
-        The code-point for the new STUN attribute defined in this
-        specification is described in <xref target="new_attributes"/>.
-      </t>
+
     </section>
 
     <section anchor="security" title="Security Considerations">
       <t>
-        When initiating a bandwidth probe it is important to to do so
-        when a device powers up or similar events. If a power failure
-        have happened and all devices in a area is booted at once the
-        bandwidth probing of all the devices can have a DDOS like effect.
+        When initiating a bandwidth probe it is important to do so
+        when a device powers up or some similar initiating events. If a
+        power failure has happened and all devices within an area are
+        rebooted concurrently the bandwidth probing of all the devices
+        can have a DDOS-like effect.  Measures should be taken to avoid
+        such scenarios (e.g., random delays to initiate bandwidth
+        probing, etc).
       </t>
       <t>
-        When setting permissions this is done on an pr IP address
+        When setting permissions this is done on a per IP address
         basis. Port number is not part of the permission. This
-        necessary limitation to the TURN RFC, and nothing introduced
-        in this specification. 
+        is necessary limitation of the TURN protocol <xref
+        target="RFC5766"/> and not something introduced by this
+        specification.
       </t>
     </section>
 
@@ -300,21 +322,24 @@
         Thanks to Dan Wing for review and input.
       </t>
     </section>
-    
+
 </middle>
 
 <back>
   <references title="Normative References">
-    
+
     <?rfc include="reference.RFC.2119"?>
-    <?rfc include="reference.RFC.5245"?>    
+    <?rfc include="reference.RFC.5245"?>
+    <?rfc include="reference.RFC.5389"?>
     <?rfc include="reference.RFC.5766"?>
     <?rfc include="reference.RFC.5780"?>
   </references>
   <references title="Informative References">
     <?rfc include='reference.I-D.petithuguenin-tram-stun-pmtud'?>
     <?rfc include='reference.I-D.martinsen-tram-stuntrace'?>
+    <?rfc include="reference.RFC.3261"?>
+    <?rfc include="reference.RFC.3264"?>
+    <?rfc include="reference.RFC.4566"?>
   </references>
 </back>
 </rfc>
-  
