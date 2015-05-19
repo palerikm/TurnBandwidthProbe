@@ -10,7 +10,7 @@
 <?rfc inline="yes"?>
 <?rfc compact="yes"?>
 <?rfc subcompact="no"?>
-<rfc category="std" docName="draft-martinsen-tram-turnbandwidthprobe-latest"
+<rfc category="info" docName="draft-martinsen-tram-turnbandwidthprobe-latest"
      ipr="trust200902">
   <front>
     <title abbrev="TURN Bandwidth Probe">Traversal Using Relays around NAT (TURN) Bandwidth Probe</title>
@@ -42,7 +42,21 @@
         <email>trondand@cisco.com</email>
       </address>
     </author>
-
+    
+    <author fullname="Marc Petit-Huguenin" initials="M." surname="Petit-Huguenin">
+      <organization abbrev="Impedance Mismatch">Impedance Mismatch</organization>
+      <address>
+        <postal>
+          <street></street>
+          <city></city>
+          <region></region>
+          <code></code>
+          <country></country>
+        </postal>
+        <email>marc@petit-huguenin.org</email>
+      </address>
+    </author>
+    
     <author fullname="Gonzalo Salgueiro" initials="G." surname="Salgueiro">
       <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
       <address>
@@ -98,6 +112,21 @@
         target="RFC3264"/>) . The endpoint will also learn its reflexive
         address on the firewall/NAT when talking to the
         TURN server.
+      </t>
+      <t>
+        Combining this with a TCP transfer on the same TURN server can
+        be used to also measure bufferbloat, an important metric for
+        multimedia applications.
+      </t>
+      <t>
+        Note that only the maximum bandwidth, maximum latency and
+        maximum bufferbloat of the aggregation of both uplink and
+        downlink can be measured.  It is not possible with this
+        technique to get the metrics of only one.  For most multimedia
+        applications using TURN that is not an issue as they are
+        generally symmetrical, but some other use cases (like
+        conferencing) may need other techniques to measure these
+        metrics separately.
       </t>
     </section>
 
@@ -170,8 +199,7 @@
         available between the client and the TURN server.
       </t>
     </section>
-
-
+        
     <section title="Base Protocol Procedures">
       <t>
         In order to perform the STUN bandwidth probing mechanism
@@ -182,74 +210,165 @@
           <t> Allocate TURN RELAY address</t>
           <t> Set correct permissions on the allocated TURN RELAY
           address</t>
-          <t> Originating client sends data to itself through the TURN server and measures bandwidth throughput and latency</t>
+          <t> Originating client sends data to itself through the TURN
+          server and measures bandwidth throughput and latency</t>
         </list>
       </t>
-      <section title="Allocating a TURN Relay Address">
-        <t>
-          The client allocates a TURN RELAY port as described in RFC
-          5766 <xref target="RFC5766"/>. Discovery of the TURN server
-          as well as the determination of what TURN server to uses is
-          entirely at the discretion of the client and outside the scope
-          of this document. A client MUST be prepared to be redirected
-          to another TURN server if it receives an ALTERNATE-SERVER
-          response.
-        </t>
-      </section>
-      <section title="Setting Permissions">
-        <t>
-          While allocating the TURN RELAY port the client will learn
-          its outermost NAT address or reflexive address. This is the
-          address the TURN server will receive the bandwidth probing
-          packets from. Specific permissions needs to be added to the
-          TURN server before it allows relaying of any packets. In this
-          case the client needs to set permissions as described in
-          Section 8 of <xref target="RFC5766"/>.
-        </t>
-        <t>
-          To set the correct permission the client must form a
-          CreatePermission request with the obtained reflexive address
-          encoded in a XOR-PEER-ADDRESS attribute. This is described
-          in Section 9.1 of <xref target="RFC5766"/>.
-        </t>
-      </section>
-      <section title="Sending Data to Measure Available Bandwidth and
+      <t>
+        When initiating a bandwidth probe it is important to not do so
+        when a device powers up or some similar initiating events. If a
+        power failure has happened and all devices within an area are
+        rebooted concurrently the bandwidth probing of all the devices
+        can have a DDOS-like effect.  Measures should be taken to avoid
+        such scenarios (e.g., random delays to initiate bandwidth
+        probing, etc).
+      </t>
+      
+      <t>
+        Discovery of the TURN server as well as the determination of
+        what TURN server to uses is entirely at the discretion of the
+        client and outside the scope of this document. A client MUST
+        be prepared to be redirected to another TURN server if it
+        receives an ALTERNATE-SERVER response.
+      </t>
+      <t>
+        While allocating the TURN RELAY port the client will learn its
+        outermost NAT address or reflexive address. This is the
+        address the TURN server will receive the bandwidth probing
+        packets from. 
+      </t>
+      <t>
+        The bandwidth mechanism can use either a UDP transport or a
+        TCP. Secure transports (i.e. TLS or DTLS) may be used to
+        discover if an intermediary network element tries to process
+        flows differently when they are secured.
+      </t>
+        <section title="UDP Procedures">
+          <t>
+            The client allocates a TURN RELAY port as described in RFC
+            5766 <xref target="RFC5766"/>.  The client then use a
+            CreatePermission request with the obtained reflexive
+            address encoded in a XOR-PEER-ADDRESS attribute as
+            described in Section 9.1 of <xref target="RFC5766"/>.
+          </t>
+          <t>
+            It is recommended to create a TURN channel as soon as
+            possible to lower the overhead of the packets exchanged.
+          </t>
+          <t>
+            If the transport address used to send the UDP packets to
+            the TURN relay is identical to the transport address used
+            to create the TURN allocation, then a TURN Channel can be
+            created immediately by using the reflexive transport
+            address learned during the Allocate.
+          </t>
+          <t>
+            If not, the TURN Channel can be created as soon the first
+            Data indication is received.
+          </t>
+          <t>
+            The client can then send UDP packets to the relay
+            transport address and receive then over the TURN Channel.
+          </t>
+          <t>
+            Immediately after this the client can send UDP packets
+            over the TURN channel and receive them directly, as an
+            additional way of averaging the impact of the difference
+            of encapsulation for the packets.  Note that the client
+            still need to periodically send packets over the TURN
+            Channel to persist eventual NAT bindings.
+          </t>
+          <t>
+            Note that the client cannot use a TCP transport to the
+            server with a UDP allocation because there would be no way
+            to retrieve the UDP reflexive address for the
+            CreatePermission request.
+          </t>
+        </section>
+        <section title="TCP Procedures">
+          <t>
+            The client allocates a TURN RELAY port as described in RFC
+            6062.  The client then use a CreatePermission request with
+            the obtained reflexive address encoded in a
+            XOR-PEER-ADDRESS attribute asdescribed in Section 9.1 of
+            <xref target="RFC5766"/>.
+          </t>
+          <t>
+            The client then establishes a TCP connection to the relay
+            transport address.  The client will receive a
+            ConnectAttempt indication that will trigger a new TCP
+            connection to the TURN server, and the sending of a
+            ConnectBind.
+          </t>
+          <t>
+            After completion of this procedure, data sent over the
+            direct TCP connection will be received over the bound TURN
+            connection, and vice-versa, although there is no
+            difference of overhead in that case.
+          </t>
+        </section>
+        <section title="Sending Data to Measure Available Bandwidth and
                       Latency">
 
+          <t>
+            The specific calculation and measurement of the bandwidth
+            is client dependent and implementation-specific and is
+            thus outside the scope of this document.
+          </t>
+          <t>
+            If the client want to use STUN packets as the basis for
+            the probing packets, then a TIMESTAMP attribute is defined
+            in this specification (see Section <xref
+            target="timestamp_attributes"/>) to simplify measurement
+            of round-trip time (RTT) and available bandwidth. A
+            PADDING attribute is already defined in RFC 5780 <xref
+            target="RFC5780"/> that makes it easy to vary the size of
+            the STUN probing packet.
+          </t>
+          <t>
+            The probing packet will be sent upstream to the TURN
+            server and later received downstream from the TURN
+            server. Available bandwidth would typically be determined
+            to be the lowest of the bandwidth values calculated for
+            the upstream and downstream directions.
+          </t>
+          <t>
+            One solution to measure the bandwidth and latency is to
+            send RTP media loopback packets (RFC 6849).  Doing so
+            would permit to reuse the standards RTP tools for
+            calculating latency, jitter and other metrics.  It may
+            also permit to get better results if some intermediary
+            network element has preferential treatment for media
+            packets.
+          </t>
+          <t>
+            If the RTP <xref target="RFC3550"/> loop-back mechanism
+            described in RFC 6849 <xref target="RFC6849"/> is in use
+            the method described here can extend the use-cases
+            mentioned in RFC6849 Section 1.1 to enable the "loopback
+            source" and "loopback mirror" to be running on the same
+            device.
+          </t>
+          <t>
+            The client should take care to reuse the same congestion
+            control mechanisms it uses when sending media to avoid
+            unnecessary strain on the network.
+          </t>
+        </section>
+      </section>
+      
+      <section title="IANA Considerations">
         <t>
-          The specific calculation and measurement of the bandwidth is
-          client dependent and implementation-specific and is thus
-          outside the scope of this document.
-        </t>
-        <t>
-          If the client want to use STUN packets as the basis for the
-          probing packets, then a TIMESTAMP attribute is defined in this
-          specification (see Section <xref
-          target="timestamp_attributes"/>) to simplify measurement of
-          round-trip time (RTT) and available bandwidth. A PADDING
-          attribute is already defined in RFC 5780 <xref
-          target="RFC5780"/> that makes it easy to vary the size of the
-          STUN probing packet.
-        </t>
-        <t>
-          The probing packet will be sent upstream to the TURN server
-          and later received downstream from the TURN
-          server. Available bandwidth would typically be determined to
-          be the lowest of the bandwidth values calculated for the
-          upstream and downstream directions.
+          This specification defines a new STUN attribute.  IANA added
+          this new attribute to the STUN Attributes sub-registry of
+          the Session Traversal Utilities for NAT (STUN) Parameters
+          registry. (This is still an ID draft so not assignmet yet)
         </t>
       </section>
-    </section>
-
-    <section title="IANA Considerations">
-      <t>
-        This specification defines a new STUN attribute.  IANA added
-        this new attribute to the STUN Attributes sub-registry of the
-        Session Traversal Utilities for NAT (STUN) Parameters registry.
-      </t>
-    <section title="New STUN Attribute" anchor="new_attributes" >
-      <t>
-        This STUN extension defines the following new attribute:
+      
+      <section title="New STUN Attribute" anchor="new_attributes" >
+        <t>
+          This STUN extension defines the following new attribute:
         <figure>
         <artwork align="left">
           <![CDATA[
@@ -259,12 +378,13 @@
         </figure>
       </t>
 
-      <section title="TIMESTAMP" anchor="timestamp_attributes">
-        <t>
-          The TIMESTAMP attribute has a length of 80 bits. Padding is
-          needed to hit the required 32 bit STUN attribute boundary.
-        </t>
-        <t>
+        <section title="TIMESTAMP" anchor="timestamp_attributes">
+          <t>
+            The TIMESTAMP attribute has a length of 80 bits. Padding
+            is needed to hit the required 32 bit STUN attribute
+            boundary.
+          </t>
+          <t>
           <figure anchor="timestamp_attr" title="TIMESTAMP Attribute">
             <artwork align="left"><![CDATA[
     0                   1                   2                   3
@@ -274,46 +394,98 @@
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |                    microseconds (32bit)                       |
    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |      seq (16bit)              |            PADDING            |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |      seq (16bit)              |                               
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
             ]]></artwork></figure></t>
           <t>
-            The seconds and microseconds fields reflect what would
-            be returned in the struct timeval when calling
-            getTimeofDay() function. Note that the size of that struct
-            may vary based on platform, but 32 bits is more than
-            sufficieint to obtain the required accuracy for the feature
-            described in this document.
+            The seconds and microseconds fields reflect what would be
+            returned in the struct timeval when calling getTimeofDay()
+            function. Note that the size of that struct may vary based
+            on platform, but 32 bits is more than sufficient to
+            obtain the required accuracy for the feature described in
+            this document. It is RECOMMENDED to initialize these
+            fields with a random value that later can be subtracted
+            to get the right timing.
           </t>
           <t>
             The seq field is a 16 bit sequence number. It is increased
-            by one for each bandwidth probe STUN packet sent. Be aware
-            that choosing a starting value other than 0 for different
-            probes is considered a security best practice.
+            by one for each bandwidth probe STUN packet sent. It is
+            RECOMMENDED to choose a random starting value.
           </t>
+        </section>
       </section>
+    
+    
+      <section anchor="implemetation_status" title="Implementation Status">
+        <t>
+          [[Note to RFC Editor: Please remove this section and the
+          reference to <xref target="RFC6982"/> before publication.]]
+        </t>
+        <t>
+          This section records the status of known implementations of
+          the protocol defined by this specification at the time of
+          posting of this Internet-Draft, and is based on a proposal
+          described in RFC 6982 <xref target="RFC6982"/>.  The
+          description of implementations in this section is intended
+          to assist the IETF in its decision processes in progressing
+          drafts to RFCs.  Please note that the listing of any
+          individual implementation here does not imply endorsement by
+          the IETF.  Furthermore, no effort has been spent to verify
+          the information presented here that was supplied by IETF
+          contributors.  This is not intended as, and must not be
+          construed to be, a catalog of available implementations or
+          their features.  Readers are advised to note that other
+          implementations may exist.
+        </t>
+        <t>
+          According to RFC 6982 <xref target="RFC6982"/>, "this will
+          allow reviewers and working groups to assign due
+          consideration to documents that have the benefit of running
+          code, which may serve as evidence of valuable
+          experimentation and feedback that have made the implemented
+          protocols more mature.  It is up to the individual working
+          groups to use this information as they see fit"
+        </t>
+        <section title="Cisco Collaboration Endpoint (CE)">
+        <t>
+        <list style="hanging" hangIndent="6">
+          <t hangText="Organization:"> Cisco </t>
+          <t hangText="Name:"> Cisco Collaboration Endpoints (CE)
+          software</t>
+          <t hangText="Description:"> Hard video endpoint part of the
+          Cisco colaboration portfolio </t>
+          <t hangText="Level of maturity:"> In released products </t>
+          <t hangText="Coverage"> Implementation of base
+          procedures of the functinality described in this
+          specification </t>
+          <t hangText="Licensing:"> Properitary </t>
+          <t hangText="Implementation experience:"> Straight forward,
+          but implementation was don prior to writing up the spec </t>
+          <t hangText="Contact:"> Paal-Erik MArtinsen (palmarti@cisco.com) </t>
 
-    </section>
-
-
+        </list>
+        </t>
+      </section>
     </section>
 
     <section anchor="security" title="Security Considerations">
-      <t>
-        When initiating a bandwidth probe it is important to do so
-        when a device powers up or some similar initiating events. If a
-        power failure has happened and all devices within an area are
-        rebooted concurrently the bandwidth probing of all the devices
-        can have a DDOS-like effect.  Measures should be taken to avoid
-        such scenarios (e.g., random delays to initiate bandwidth
-        probing, etc).
-      </t>
       <t>
         When setting permissions this is done on a per IP address
         basis. Port number is not part of the permission. This
         is necessary limitation of the TURN protocol <xref
         target="RFC5766"/> and not something introduced by this
         specification.
+      </t>
+      <t>
+        To prevent replay attacks or other attacks that rely on static
+        sequence number initialization it is important to randomly
+        initialize the seq number in the TIMESTAMP Attribute. Likewise
+        it is important to hide the time information by assigning a
+        random value to the seconds and microseconds fields. That
+        random value can be added and subtracted by the client when
+        sending and receiving packets to get the correct value. This
+        prevents any information leakage regarding time from the
+        client.
       </t>
     </section>
 
@@ -327,12 +499,14 @@
 
 <back>
   <references title="Normative References">
-
     <?rfc include="reference.RFC.2119"?>
+    <?rfc include="reference.RFC.3550"?>
     <?rfc include="reference.RFC.5245"?>
     <?rfc include="reference.RFC.5389"?>
     <?rfc include="reference.RFC.5766"?>
     <?rfc include="reference.RFC.5780"?>
+    <?rfc include="reference.RFC.6849"?>
+    <?rfc include="reference.RFC.6982"?>
   </references>
   <references title="Informative References">
     <?rfc include='reference.I-D.petithuguenin-tram-stun-pmtud'?>
