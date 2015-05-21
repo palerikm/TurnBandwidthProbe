@@ -42,21 +42,7 @@
         <email>trondand@cisco.com</email>
       </address>
     </author>
-    
-    <author fullname="Marc Petit-Huguenin" initials="M." surname="Petit-Huguenin">
-      <organization abbrev="Impedance Mismatch">Impedance Mismatch</organization>
-      <address>
-        <postal>
-          <street></street>
-          <city></city>
-          <region></region>
-          <code></code>
-          <country></country>
-        </postal>
-        <email>marc@petit-huguenin.org</email>
-      </address>
-    </author>
-    
+        
     <author fullname="Gonzalo Salgueiro" initials="G." surname="Salgueiro">
       <organization abbrev="Cisco">Cisco Systems, Inc.</organization>
       <address>
@@ -71,6 +57,20 @@
       </address>
     </author>
 
+    <author fullname="Marc Petit-Huguenin" initials="M." surname="Petit-Huguenin">
+      <organization abbrev="Impedance Mismatch">Impedance Mismatch</organization>
+      <address>
+        <postal>
+          <street></street>
+          <city></city>
+          <region></region>
+          <code></code>
+          <country></country>
+        </postal>
+        <email>marc@petit-huguenin.org</email>
+      </address>
+    </author>
+    
     <date />
 
     <workgroup>TRAM</workgroup>
@@ -78,12 +78,14 @@
     <abstract>
       <t>
         Performing pre-call probing to discover a reasonable value for
-        the available bandwidth is useful information that can be
+        the available bandwidth, is useful information that can be
         utilized by bandwidth sensitive or bandwidth intensive network
         devices (e.g., video encoders). The method described herein is
         intended to produce an initial bandwidth value. Applications
         using this mechanism should also employ appropriate rate
-        adaptation techniques.
+        adaptation techniques. In addition to bandwidth, latency and
+        bufferbloat can also be measured. No modification is needed on
+        the server side. 
       </t>
     </abstract>
   </front>
@@ -128,6 +130,9 @@
         conferencing) may need other techniques to measure these
         metrics separately.
       </t>
+      <t>
+        No modification to the TURN server is necessary.
+      </t>
     </section>
 
     <section anchor="notation" title="Notational Conventions">
@@ -141,9 +146,10 @@
 
     <section title="Overview of Operation">
       <t>
-        Prior to the call (upon registering with the TURN server or at
-        any opportune time thereafter) the endpoint can measure
-        bandwidth and latency between the endpoint and TURN server.
+        Prior to the call (upon registering with the call control
+        server, receiving a configuration, loading application, or a
+        similar event) the endpoint can measure bandwidth and latency
+        between the endpoint and the TURN server.
       </t>
       <t>
       <figure anchor="fig_overview"><artwork><![CDATA[
@@ -161,35 +167,35 @@
       </t>
       <t>
         The agent allocates a TURN Relay port on its designated TURN
-        server as described in RFC 5766 <xref target="RFC5766"/>. In
+        server as described in TURN RFC <xref target="RFC5766"/>. In
         the process the agent will also learn the outermost NAT
         address. This is called a reflexive address (Rflx). For more
-        information see Section 2.1 of <xref target="RFC5766"/>
-        regarding candidate gathering in ICE.
+        information see Section 2.1 of the TURN RFC regarding
+        candidate gathering in ICE.
       </t>
       <t>
         The agent must set the permissions on the allocated RELAY port
-        as described in Section 8 of <xref target="RFC5766"/> to allow
+        as described in Section 8 of the TURN RFC to allow
         traffic from the discovered reflexive address.
       </t>
       <t>
         When sending packets to the allocated RELAY port on the TURN
         server, the packets will be forwarded back to the agent in a
-        data indication packet. See Section 10 of <xref
-        target="RFC5766"/> for details on how the TURN server can relay
-        packets back to the allocating agent. Available bandwidth can be
-        measured by sending varying number of packets and detecting the
-        amount of packet loss. Each packet sent affects both upstream
-        and downstream links.
+        data indication packet. See Section 10 of the TURN RFC for
+        details on how the TURN server can relay packets back to the
+        allocating agent. Available bandwidth can be measured by
+        sending varying number of packets and detecting the amount of
+        packet loss. Each packet sent affects both upstream and
+        downstream links.
       </t>
       <t>
         To make it easier to calculate the available bandwidth a
         TIMESTAMP attribute is defined in this document (see Section
-        <xref target="timestamp_attributes"/>) and can be added
-        to the Session Traversal Utilities for NAT (STUN) <xref
+        <xref target="timestamp_attributes"/>) and can be added to the
+        Session Traversal Utilities for NAT (STUN) <xref
         target="RFC5389"/> probe packets. The PADDING attribute from
-        RFC5780 <xref target="RFC5780"/> can be used to vary the packet
-        size.
+        the NAT Behavior Discovery Using STUN RFC <xref
+        target="RFC5780"/> can be used to vary the packet size.
       </t>
       <t>
         Discovering the MTU and network path (using the STUN-PMTUD
@@ -245,11 +251,11 @@
       </t>
         <section title="UDP Procedures">
           <t>
-            The client allocates a TURN RELAY port as described in RFC
-            5766 <xref target="RFC5766"/>.  The client then use a
-            CreatePermission request with the obtained reflexive
-            address encoded in a XOR-PEER-ADDRESS attribute as
-            described in Section 9.1 of <xref target="RFC5766"/>.
+            The client allocates a TURN RELAY port as described in the
+            TURN RFC. The client then use a CreatePermission request
+            with the obtained reflexive address encoded in a
+            XOR-PEER-ADDRESS attribute as described in Section 9.1 of
+            the TURN RFC.
           </t>
           <t>
             It is recommended to create a TURN channel as soon as
@@ -287,11 +293,12 @@
         </section>
         <section title="TCP Procedures">
           <t>
-            The client allocates a TURN RELAY port as described in RFC
-            6062.  The client then use a CreatePermission request with
-            the obtained reflexive address encoded in a
-            XOR-PEER-ADDRESS attribute asdescribed in Section 9.1 of
-            <xref target="RFC5766"/>.
+            The client allocates a TURN RELAY port as described in
+            TURN Extensions for TCP Allocations <xref
+            target="RFC6062"/>. The client then use a CreatePermission
+            request with the obtained reflexive address encoded in a
+            XOR-PEER-ADDRESS attribute as described in Section 9.1 of
+            the TURN RFC.
           </t>
           <t>
             The client then establishes a TCP connection to the relay
@@ -333,21 +340,16 @@
             the upstream and downstream directions.
           </t>
           <t>
-            One solution to measure the bandwidth and latency is to
-            send RTP media loopback packets (RFC 6849).  Doing so
-            would permit to reuse the standards RTP tools for
-            calculating latency, jitter and other metrics.  It may
-            also permit to get better results if some intermediary
-            network element has preferential treatment for media
-            packets.
-          </t>
-          <t>
             If the RTP <xref target="RFC3550"/> loop-back mechanism
             described in RFC 6849 <xref target="RFC6849"/> is in use
             the method described here can extend the use-cases
             mentioned in RFC6849 Section 1.1 to enable the "loopback
             source" and "loopback mirror" to be running on the same
-            device.
+            device. Using RTP would permit to reuse the standards RTP
+            tools for calculating latency, jitter and other metrics.
+            It may also permit to get better results if some
+            intermediary network element has preferential treatment
+            for media packets.
           </t>
           <t>
             The client should take care to reuse the same congestion
@@ -362,7 +364,7 @@
           This specification defines a new STUN attribute.  IANA added
           this new attribute to the STUN Attributes sub-registry of
           the Session Traversal Utilities for NAT (STUN) Parameters
-          registry. (This is still an ID draft so not assignmet yet)
+          registry. (This is still an ID draft so not assignment yet)
         </t>
       </section>
       
@@ -453,15 +455,15 @@
           <t hangText="Name:"> Cisco Collaboration Endpoints (CE)
           software</t>
           <t hangText="Description:"> Hard video endpoint part of the
-          Cisco colaboration portfolio </t>
+          Cisco collaboration portfolio </t>
           <t hangText="Level of maturity:"> In released products </t>
           <t hangText="Coverage"> Implementation of base
-          procedures of the functinality described in this
+          procedures of the functionality described in this
           specification </t>
-          <t hangText="Licensing:"> Properitary </t>
+          <t hangText="Licensing:"> Proprietary </t>
           <t hangText="Implementation experience:"> Straight forward,
           but implementation was don prior to writing up the spec </t>
-          <t hangText="Contact:"> Paal-Erik MArtinsen (palmarti@cisco.com) </t>
+          <t hangText="Contact:"> Paal-Erik Martinsen (palmarti@cisco.com) </t>
 
         </list>
         </t>
@@ -491,7 +493,7 @@
 
     <section anchor="ack" title="Acknowledgements">
       <t>
-        Thanks to Dan Wing for review and input.
+        Thanks to Dan Wing for input.
       </t>
     </section>
 
@@ -505,6 +507,7 @@
     <?rfc include="reference.RFC.5389"?>
     <?rfc include="reference.RFC.5766"?>
     <?rfc include="reference.RFC.5780"?>
+    <?rfc include="reference.RFC.6062"?>
     <?rfc include="reference.RFC.6849"?>
     <?rfc include="reference.RFC.6982"?>
   </references>
